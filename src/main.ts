@@ -1,9 +1,11 @@
 import './style.css';
 import { GRID_SIZE, TILE_PX, BUILD_COST, createInitialState, inBounds } from './state';
 import type { GameState } from './state';
-import type { Tool } from './types';
+import type { Tool, ViewMode } from './types';
 import { tick, refreshMetrics } from './sim';
 import { render } from './render';
+import { drawGraph } from './graph';
+import { saveGame, loadGame, clearSave, hasSave } from './storage';
 
 const state: GameState = createInitialState();
 
@@ -13,10 +15,15 @@ canvas.width = GRID_SIZE * TILE_PX;
 canvas.height = GRID_SIZE * TILE_PX;
 const ctx = canvas.getContext('2d')!;
 
+// 人口推移グラフ
+const graphCanvas = document.getElementById('graph') as HTMLCanvasElement;
+const graphCtx = graphCanvas.getContext('2d')!;
+
 // ---- 再描画（イベント駆動: 状態が変わったときだけ描く） ----------------
 // 毎フレーム描く rAF ループは使わない（無駄な再描画を避け、非表示タブでも整合）
 function redraw(): void {
   render(ctx, state);
+  drawGraph(graphCtx, state);
   updateStatusBar();
 }
 
@@ -202,10 +209,20 @@ const speedButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.s
 let tickTimer: number | null = null;
 const BASE_TICK_MS = 1000; // ×1 のとき 1か月/秒
 
+let autosaveWarned = false;
+function autosave(): void {
+  // データは数KBと小さいため毎tick保存してよい（初年度から確実に保護）。
+  if (!saveGame(state) && !autosaveWarned) {
+    autosaveWarned = true;
+    showToast('自動保存に失敗しました（保存容量の上限かもしれません）');
+  }
+}
+
 function scheduleTicks(): void {
   if (tickTimer !== null) clearInterval(tickTimer);
   tickTimer = window.setInterval(() => {
     tick(state);
+    autosave();
     redraw();
   }, BASE_TICK_MS / state.speed);
 }
@@ -218,6 +235,7 @@ function setRunning(run: boolean): void {
   else if (tickTimer !== null) {
     clearInterval(tickTimer);
     tickTimer = null;
+    autosave(); // 一時停止時にも保存
   }
 }
 
@@ -251,6 +269,54 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// ---- 表示モード（通常 / 地価 / 汚染） ----------------------------------
+const viewButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.view-btn'));
+function selectView(view: ViewMode): void {
+  state.view = view;
+  viewButtons.forEach((b) => b.classList.toggle('active', b.dataset.view === view));
+  redraw();
+}
+viewButtons.forEach((b) => {
+  b.addEventListener('click', () => selectView(b.dataset.view as ViewMode));
+});
+selectView('normal');
+
+// ---- セーブ / ロード / リセット ----------------------------------------
+function resetGame(): void {
+  setRunning(false);
+  const fresh = createInitialState();
+  state.grid = fresh.grid;
+  state.stats = fresh.stats;
+  state.demand = fresh.demand;
+  state.unemployment = 0;
+  state.lastIncome = 0;
+  state.lastExpense = 0;
+  state.history = [];
+  refreshMetrics(state);
+  selectView('normal'); // 表示モードも通常に戻す（redraw も呼ばれる）
+}
+
+document.getElementById('btn-save')!.addEventListener('click', () => {
+  showToast(saveGame(state) ? '保存しました' : '保存に失敗しました');
+});
+document.getElementById('btn-load')!.addEventListener('click', () => {
+  if (loadGame(state)) {
+    setRunning(false);
+    refreshMetrics(state);
+    redraw();
+    showToast('読み込みました');
+  } else {
+    showToast('保存データがありません');
+  }
+});
+document.getElementById('btn-reset')!.addEventListener('click', () => {
+  if (window.confirm('本当に街をリセットしますか？（保存データも消えます）')) {
+    clearSave();
+    resetGame();
+    showToast('リセットしました');
+  }
+});
+
 // ---- 遊び方オーバーレイ ------------------------------------------------
 const intro = document.getElementById('intro')!;
 document.getElementById('btn-start')!.addEventListener('click', () => {
@@ -263,5 +329,7 @@ document.getElementById('btn-help')!.addEventListener('click', () => {
 // ---- 起動 --------------------------------------------------------------
 // デバッグ用に状態を公開（コンソールから window.__game で確認可能）
 (window as unknown as { __game: GameState }).__game = state;
-refreshMetrics(state); // 初期需要（空の街でも工業需要が出る）を反映
+// 前回の街があれば自動復元（Webアプリとしてリロードしても続きから遊べる）
+if (hasSave()) loadGame(state);
+refreshMetrics(state); // 需要・地価などを反映（空の街でも工業需要が出る）
 redraw();

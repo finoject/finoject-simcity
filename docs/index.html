@@ -4,15 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>都市シミュレーション（SimCity風）</title>
-    <script type="module" crossorigin src="/finoject-simcity/assets/index-iw9HF23p.js"></script>
-    <link rel="stylesheet" crossorigin href="/finoject-simcity/assets/index-BUb2AJ-s.css">
+    <script type="module" crossorigin src="/finoject-simcity/assets/index-Bn1tQNk6.js"></script>
+    <link rel="stylesheet" crossorigin href="/finoject-simcity/assets/index-DmAzz6DO.css">
   </head>
   <body>
     <div id="app">
       <!-- タイトル -->
       <div id="titlebar">
         <div class="title-text">
-          <div class="title-main">🏙 都市シミュレーション <span class="badge">SimCity風 / Phase 1</span></div>
+          <div class="title-main">🏙 都市シミュレーション <span class="badge">SimCity風</span></div>
           <div class="title-sub">市長になって、道路を敷き・ゾーンを置いて街を育てるゲームです。</div>
         </div>
         <button id="btn-help" title="遊び方をもう一度見る">? 遊び方</button>
@@ -65,6 +65,16 @@
             </div>
             <div class="rci-note">右(緑)=需要あり／左(赤)=供給過剰</div>
           </div>
+
+          <h2>表示モード</h2>
+          <div id="views">
+            <button class="view-btn" data-view="normal">通常</button>
+            <button class="view-btn" data-view="landvalue">地価</button>
+            <button class="view-btn" data-view="pollution">汚染</button>
+          </div>
+
+          <h2>人口の推移</h2>
+          <canvas id="graph" width="178" height="64"></canvas>
         </aside>
 
         <!-- 中央: マップ -->
@@ -85,7 +95,12 @@
           <button class="speed-btn" data-speed="2">×2</button>
           <button class="speed-btn" data-speed="3">×3</button>
         </div>
-        <div id="hint">道路のとなりにゾーンを置いて「▶ 再生」。道路沿いに人口が増えます。（Space＝再生/停止）</div>
+        <div class="save-group">
+          <button id="btn-save" title="今の街を保存">💾 保存</button>
+          <button id="btn-load" title="保存した街を読み込む">📂 読込</button>
+          <button id="btn-reset" title="街を最初からやり直す">🗑 リセット</button>
+        </div>
+        <div id="hint">道路のとなりにゾーンを置いて「▶ 再生」。道路沿いに人口が増えます。（Space＝再生/停止・自動保存あり）</div>
       </footer>
 
       <!-- トースト（資金不足など） -->
@@ -119,7 +134,7 @@
         </div>
 
         <section class="intro-econ">
-          <h3>お金のしくみ（Phase 2）</h3>
+          <h3>お金のしくみ</h3>
           <ul>
             <li>開始資金は <b>$10,000</b>。建設にはお金がかかります（道路 $10 / 各ゾーン $50 / 削除は無料）</li>
             <li>毎月、<b>税収（人口×税率×地価）</b>が入り、<b>道路の維持費</b>が出ていきます（上部「収支」に表示）</li>
@@ -128,12 +143,21 @@
         </section>
 
         <section class="intro-econ">
-          <h3>街が育つしくみ（Phase 3 — ここが重要）</h3>
+          <h3>街が育つしくみ（ここが重要）</h3>
           <ul>
             <li><b>住宅だけでは育ちません。</b>まず <b>工業</b>を置くと外需で仕事が生まれ、その雇用が <b>住宅</b>を呼び、増えた人口が <b>商業</b>を呼ぶ、という連鎖で発展します</li>
             <li>左下の <b>需要 (RCI) バー</b>を見て、<b>右に伸びている(緑)＝足りない用途</b>を建て増しましょう</li>
             <li><b>地価</b>：道路や商業の近くは高く、工業や汚染の近くは低い。地価が高いほど住宅は高密度・高所得になります</li>
             <li><b>失業率</b>が高いと人口が流出します。雇用（商業・工業）と住宅のバランスが大切です</li>
+          </ul>
+        </section>
+
+        <section class="intro-econ">
+          <h3>便利な機能</h3>
+          <ul>
+            <li><b>自動保存</b>：街は自動で保存され、ページを閉じても<b>次回は続きから</b>遊べます（手動の 💾保存 / 📂読込 / 🗑リセット も左下・下部にあります）</li>
+            <li><b>表示モード</b>：マップを「地価」「汚染」のヒートマップに切り替えて、街の状態を確認できます</li>
+            <li><b>人口の推移</b>グラフで成長を振り返れます</li>
           </ul>
         </section>
 

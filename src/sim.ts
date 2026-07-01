@@ -22,6 +22,7 @@ import {
   LV_RES,
   LV_IND,
   LV_POLL,
+  HISTORY_MAX,
   inBounds,
 } from './state';
 import type { Demand, TileType } from './types';
@@ -268,6 +269,10 @@ export function tick(state: GameState): void {
   state.stats.money += incomeR - expense;
   state.lastIncome = incomeR;
   state.lastExpense = expense;
+
+  // 人口推移を記録（グラフ用）
+  state.history.push(pop2);
+  if (state.history.length > HISTORY_MAX) state.history.shift();
 
   state.stats.month += 1;
 }

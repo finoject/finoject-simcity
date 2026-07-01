@@ -44,3 +44,6 @@ export interface CityStats {
 
 /** パレットで選べる操作 */
 export type Tool = Exclude<TileType, 'empty'> | 'bulldoze';
+
+/** マップの表示モード */
+export type ViewMode = 'normal' | 'landvalue' | 'pollution';

@@ -1,4 +1,4 @@
-import type { Tile, CityStats, Tool, Demand } from './types';
+import type { Tile, CityStats, Tool, Demand, ViewMode } from './types';
 
 /** グリッド一辺のタイル数（後で拡張可能に定数化） */
 export const GRID_SIZE = 32;
@@ -62,6 +62,9 @@ export const LV_IND = 0.25;
 /** 工業からの汚染係数 */
 export const LV_POLL = 0.4;
 
+/** 人口推移グラフに保持する最大点数 */
+export const HISTORY_MAX = 180;
+
 export interface GameState {
   grid: Tile[][];
   stats: CityStats;
@@ -77,6 +80,10 @@ export interface GameState {
   demand: Demand;
   /** 失業率 0..1 */
   unemployment: number;
+  /** 人口の推移（tick ごと、最大 HISTORY_MAX 点） */
+  history: number[];
+  /** マップの表示モード（通常／地価／汚染） */
+  view: ViewMode;
 }
 
 function emptyTile(): Tile {
@@ -104,6 +111,8 @@ export function createInitialState(): GameState {
     lastExpense: 0,
     demand: { r: 0, c: 0, i: 0 },
     unemployment: 0,
+    history: [],
+    view: 'normal',
   };
 }
 
