@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>都市シミュレーション（SimCity風）</title>
+    <script type="module" crossorigin src="/finoject-simcity/assets/index-iw9HF23p.js"></script>
+    <link rel="stylesheet" crossorigin href="/finoject-simcity/assets/index-BUb2AJ-s.css">
+  </head>
+  <body>
+    <div id="app">
+      <!-- タイトル -->
+      <div id="titlebar">
+        <div class="title-text">
+          <div class="title-main">🏙 都市シミュレーション <span class="badge">SimCity風 / Phase 1</span></div>
+          <div class="title-sub">市長になって、道路を敷き・ゾーンを置いて街を育てるゲームです。</div>
+        </div>
+        <button id="btn-help" title="遊び方をもう一度見る">? 遊び方</button>
+      </div>
+
+      <!-- 上部: 都市ステータスバー -->
+      <header id="statusbar">
+        <div class="stat" title="街に住んでいる人の数"><span class="label">人口</span><span id="stat-pop" class="value">0</span></div>
+        <div class="stat" title="商業・工業ゾーンが生み出す働き口の数"><span class="label">雇用</span><span id="stat-jobs" class="value">0</span></div>
+        <div class="stat" title="働きたい人のうち仕事に就けていない割合。高いと人口が流出します"><span class="label">失業率</span><span id="stat-unemp" class="value">0%</span></div>
+        <div class="stat" title="市の資金。建設に使い、毎月の収支で増減します"><span class="label">資金</span><span id="stat-money" class="value">$0</span></div>
+        <div class="stat" title="月次の収支（税収 − 道路維持費）"><span class="label">収支</span><span id="stat-balance" class="value">$0/月</span></div>
+        <div class="stat" title="人口にかかる税率"><span class="label">税率</span><span id="stat-tax" class="value">9%</span></div>
+        <div class="stat" title="街ができてからの経過時間（1tick=1か月）"><span class="label">経過</span><span id="stat-month" class="value">1年目 1月</span></div>
+      </header>
+
+      <div id="main">
+        <!-- 左: ツールパレット -->
+        <aside id="palette">
+          <h2>ツール（クリック→マップに配置）</h2>
+          <button class="tool" data-tool="road"><span class="sw sw-road"></span><span class="tname">道路</span><span class="cost">$10</span><kbd>1</kbd></button>
+          <button class="tool" data-tool="residential"><span class="sw sw-res"></span><span class="tname">住宅ゾーン</span><span class="cost">$50</span><kbd>2</kbd></button>
+          <button class="tool" data-tool="commercial"><span class="sw sw-com"></span><span class="tname">商業ゾーン</span><span class="cost">$50</span><kbd>3</kbd></button>
+          <button class="tool" data-tool="industrial"><span class="sw sw-ind"></span><span class="tname">工業ゾーン</span><span class="cost">$50</span><kbd>4</kbd></button>
+          <button class="tool" data-tool="bulldoze"><span class="sw sw-del"></span><span class="tname">削除</span><span class="cost">無料</span><kbd>5</kbd></button>
+
+          <h2>凡例（マップの見かた）</h2>
+          <ul id="legend">
+            <li><span class="sw sw-empty"></span>未開発の土地</li>
+            <li><span class="sw sw-road"></span>道路</li>
+            <li><span class="sw sw-res"></span>住宅（緑）＝人が住む</li>
+            <li><span class="sw sw-com"></span>商業（青）＝店・雇用</li>
+            <li><span class="sw sw-ind"></span>工業（黄）＝工場・雇用</li>
+            <li class="note">建物が明るく・大きいほど発展しています</li>
+          </ul>
+
+          <h2>需要 (RCI) — 足りない用途を建てよう</h2>
+          <div id="rci">
+            <div class="rci-row">
+              <span class="rci-lbl sw-res-t">住</span>
+              <div class="rci-track"><div class="rci-center"></div><div class="rci-bar" id="rci-r"></div></div>
+            </div>
+            <div class="rci-row">
+              <span class="rci-lbl sw-com-t">商</span>
+              <div class="rci-track"><div class="rci-center"></div><div class="rci-bar" id="rci-c"></div></div>
+            </div>
+            <div class="rci-row">
+              <span class="rci-lbl sw-ind-t">工</span>
+              <div class="rci-track"><div class="rci-center"></div><div class="rci-bar" id="rci-i"></div></div>
+            </div>
+            <div class="rci-note">右(緑)=需要あり／左(赤)=供給過剰</div>
+          </div>
+        </aside>
+
+        <!-- 中央: マップ -->
+        <div id="canvas-wrap">
+          <div class="canvas-caption">↓ ここが街をつくる土地（32×32マス）です</div>
+          <canvas id="map"></canvas>
+        </div>
+      </div>
+
+      <!-- 下部: 再生コントロール -->
+      <footer id="controls">
+        <span class="ctrl-label">時間:</span>
+        <button id="btn-play">▶ 再生</button>
+        <button id="btn-pause" disabled>⏸ 一時停止</button>
+        <div class="speed">
+          <span>速度</span>
+          <button class="speed-btn" data-speed="1">×1</button>
+          <button class="speed-btn" data-speed="2">×2</button>
+          <button class="speed-btn" data-speed="3">×3</button>
+        </div>
+        <div id="hint">道路のとなりにゾーンを置いて「▶ 再生」。道路沿いに人口が増えます。（Space＝再生/停止）</div>
+      </footer>
+
+      <!-- トースト（資金不足など） -->
+      <div id="toast"></div>
+    </div>
+
+    <!-- 遊び方オーバーレイ（初回表示） -->
+    <div id="intro" class="intro-open">
+      <div class="intro-card">
+        <h1>🏙 これは「都市シミュレーション」ゲームです</h1>
+        <p class="lead">あなたが市長になり、何もない土地に街をつくります。時間を進めると、街が自動で発展していきます。</p>
+
+        <div class="intro-grid">
+          <section>
+            <h3>この画面で見ているもの</h3>
+            <ul>
+              <li><b>中央の大きな四角</b>＝街をつくる土地（32×32マス）</li>
+              <li><b>上のバー</b>＝街の状態（人口・雇用・資金・税率・経過月）</li>
+              <li><b>左</b>＝配置ツールと色の凡例</li>
+              <li><b>下</b>＝時間を進めるボタン（再生・速度）</li>
+            </ul>
+          </section>
+          <section>
+            <h3>遊び方（3ステップ）</h3>
+            <ol>
+              <li>左で <b>道路</b> を選び、マップをドラッグして道路を敷く</li>
+              <li><b>住宅ゾーン</b> などを選び、<b>道路のとなり</b>に置く<br /><span class="muted">※道路に接していないと発展しません</span></li>
+              <li>下の <b>▶ 再生</b> を押す → 道路沿いに建物が育ち、人口が増えます</li>
+            </ol>
+          </section>
+        </div>
+
+        <section class="intro-econ">
+          <h3>お金のしくみ（Phase 2）</h3>
+          <ul>
+            <li>開始資金は <b>$10,000</b>。建設にはお金がかかります（道路 $10 / 各ゾーン $50 / 削除は無料）</li>
+            <li>毎月、<b>税収（人口×税率×地価）</b>が入り、<b>道路の維持費</b>が出ていきます（上部「収支」に表示）</li>
+            <li>資金が足りないと建設できません。人口を増やして黒字経営を目指しましょう</li>
+          </ul>
+        </section>
+
+        <section class="intro-econ">
+          <h3>街が育つしくみ（Phase 3 — ここが重要）</h3>
+          <ul>
+            <li><b>住宅だけでは育ちません。</b>まず <b>工業</b>を置くと外需で仕事が生まれ、その雇用が <b>住宅</b>を呼び、増えた人口が <b>商業</b>を呼ぶ、という連鎖で発展します</li>
+            <li>左下の <b>需要 (RCI) バー</b>を見て、<b>右に伸びている(緑)＝足りない用途</b>を建て増しましょう</li>
+            <li><b>地価</b>：道路や商業の近くは高く、工業や汚染の近くは低い。地価が高いほど住宅は高密度・高所得になります</li>
+            <li><b>失業率</b>が高いと人口が流出します。雇用（商業・工業）と住宅のバランスが大切です</li>
+          </ul>
+        </section>
+
+        <div class="intro-legend">
+          <span><span class="sw sw-road"></span>道路</span>
+          <span><span class="sw sw-res"></span>住宅</span>
+          <span><span class="sw sw-com"></span>商業</span>
+          <span><span class="sw sw-ind"></span>工業</span>
+          <span class="muted">明るく大きいほど発展</span>
+        </div>
+
+        <button id="btn-start">街づくりを始める</button>
+      </div>
+    </div>
+
+  </body>
+</html>
